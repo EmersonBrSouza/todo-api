@@ -109,6 +109,62 @@ app.patch('/todos/:id', (req,res) => {
 	})
 });
 
+app.post('/user/register', (req,res) => {
+	var body = _.pick(req.body, ['email','password']);
+
+	let user = new User({
+		email: body.email,
+		password: body.password
+	});
+
+	user.save().then(()=>{
+		return user.generateAuthToken();
+	}).then((token) =>
+		res.header('x-auth', token).send(user)
+	).catch((e)=> {
+		if (e.name == "BulkWriteError" && e.code == 11000){
+			res.status(400).send({
+				message: "Already exists a registered email"
+			})
+		}else{
+			res.status(400).send({
+				message:e.message
+			})
+		}
+	})
+});
+
+app.post('/user/login', (req,res) => {
+	var body = _.pick(req.body, ['email','password']);
+
+	let user = new User({
+		email: body.email,
+		password: body.password
+	});
+
+	User.findOne({email:user.email}).then((doc)=>{
+		if (!doc){
+			return res.status(404).send({message:"Not Found"});
+		}
+
+		if (doc.password == body.password){
+			return res.status(200).send({success:true});
+		}
+		
+		return res.status(200).send({success:false});
+	}).catch((e)=> {
+		if (e.name == "BulkWriteError" && e.code == 11000){
+			res.status(400).send({
+				message: "Already exists a registered email"
+			})
+		}else{
+			res.status(400).send({
+				message:e.message
+			})
+		}
+	})
+});
+
 app.listen(port, () => {
 	console.log(`Started on port ${port}`);
 })
